@@ -19,6 +19,14 @@
 
 package org.apache.dubbo.samples.basic;
 
+import org.apache.dubbo.config.ApplicationConfig;
+import org.apache.dubbo.config.ProtocolConfig;
+import org.apache.dubbo.config.RegistryConfig;
+import org.apache.dubbo.config.ServiceConfig;
+import org.apache.dubbo.config.bootstrap.DubboBootstrap;
+import org.apache.dubbo.samples.basic.impl.helloworld.GrpcGreeterImpl;
+
+import io.grpc.examples.helloworld.DubboGreeterGrpc;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import java.util.concurrent.CountDownLatch;
@@ -26,13 +34,18 @@ import java.util.concurrent.CountDownLatch;
 public class BasicProvider {
 
     public static void main(String[] args) throws Exception {
-        new EmbeddedZooKeeper(2181, true).start();
 
-        ClassPathXmlApplicationContext context =
-                new ClassPathXmlApplicationContext("spring/dubbo-demo-provider.xml");
-        context.start();
+        ServiceConfig<DubboGreeterGrpc.IGreeter> serviceConfig = new ServiceConfig<>();
+        serviceConfig.setInterface(DubboGreeterGrpc.IGreeter.class);
+        serviceConfig.setRef(new GrpcGreeterImpl());
 
-        System.out.println("dubbo service started");
-        new CountDownLatch(1).await();
+        DubboBootstrap bootstrap = DubboBootstrap.getInstance();
+        bootstrap.application(new ApplicationConfig("dubbo-demo-triple-api-provider"))
+                .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
+                .protocol(new ProtocolConfig("grpc", 50051))
+                .service(serviceConfig)
+                .start()
+                .await();
+
     }
 }
